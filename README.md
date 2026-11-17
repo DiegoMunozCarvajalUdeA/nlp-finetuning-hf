@@ -2,15 +2,15 @@
 
 Proyecto del curso de Procesamiento de Lenguaje Natural (UdeA): fine-tuning de modelos de Hugging Face para clasificación de secuencias, etiquetado de secuencias y sequence-to-sequence.
 
-Todo el desarrollo está en [`notebooks/proyecto2_finetuning.ipynb`](notebooks/proyecto2_finetuning.ipynb).
+Todo el desarrollo está en [`notebooks/proyecto2_finetuning.ipynb`](notebooks/proyecto2_finetuning.ipynb). Cómo escogí los datasets y modelos está en [`docs/seleccion_datasets.md`](docs/seleccion_datasets.md).
 
 ## Tareas
 
-| Tarea | Dataset | Modelo | Métrica(s) |
+| Tarea | Dataset | Modelo | Métrica principal |
 |---|---|---|---|
-| Clasificación de secuencias | pendiente | pendiente | pendiente |
-| Etiquetado de secuencias | pendiente | pendiente | pendiente |
-| Sequence-to-sequence | pendiente | pendiente | pendiente |
+| Clasificación de secuencias | [`dair-ai/emotion`](https://huggingface.co/datasets/dair-ai/emotion) | [`distilbert/distilbert-base-uncased`](https://huggingface.co/distilbert/distilbert-base-uncased) | F1 macro |
+| Etiquetado de secuencias (NER) | [`BramVanroy/conll2002`](https://huggingface.co/datasets/BramVanroy/conll2002), config `es` | [`dccuchile/bert-base-spanish-wwm-cased`](https://huggingface.co/dccuchile/bert-base-spanish-wwm-cased) | F1 de seqeval |
+| Sequence-to-sequence (resumen de diálogos) | [`knkarthick/dialogsum`](https://huggingface.co/datasets/knkarthick/dialogsum) | [`facebook/bart-base`](https://huggingface.co/facebook/bart-base) | ROUGE |
 
 ## Instalación local (uv)
 
@@ -41,6 +41,7 @@ Antes de correrlo:
 
 ```
 notebooks/proyecto2_finetuning.ipynb   notebook principal
+docs/seleccion_datasets.md             candidatos, medidas y decisión de datasets
 scripts/check_env.py                   revisa que el entorno quedó bien
 outputs/                               modelos, checkpoints y figuras (no se sube a git)
 pyproject.toml, uv.lock                dependencias

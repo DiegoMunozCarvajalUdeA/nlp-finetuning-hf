@@ -1,6 +1,18 @@
 # Selección de datasets y modelos
 
-Notas para decidir qué dataset y qué modelo usar en cada tarea. La decisión todavía no está tomada: aquí van los candidatos que probé, lo que medí y lo que recomendaría.
+Notas para decidir qué dataset y qué modelo usar en cada tarea: los candidatos que probé, lo que medí y lo que recomendaba.
+
+## Decisión
+
+Me quedé con las tres recomendaciones de este documento:
+
+| Tarea | Dataset | Modelo | Métrica principal |
+|---|---|---|---|
+| 1. Clasificación de secuencias | `dair-ai/emotion` | `distilbert/distilbert-base-uncased` | F1 macro |
+| 2. Etiquetado de secuencias (NER) | `BramVanroy/conll2002`, config `es` | `dccuchile/bert-base-spanish-wwm-cased` | F1 de seqeval |
+| 3. Sequence-to-sequence (resumen de diálogos) | `knkarthick/dialogsum` | `facebook/bart-base` | ROUGE |
+
+Las longitudes de este documento salen de muestras de 3000 ejemplos. En el EDA del notebook las medí sobre los splits completos, así que algunos máximos y porcentajes cambian un poco.
 
 Todo lo probé el 2026-11-17 con las versiones del `uv.lock` (datasets 5.2.0, transformers 5.23.0). Los scripts de prueba y los JSON con las medidas quedaron en `outputs/exploracion/`, que no va a git.
 
@@ -66,7 +78,7 @@ Métricas: F1 macro como métrica principal (la de `metric_for_best_model`), por
 
 | Dataset | Idioma | Tamaño y splits (train / val / test) | Licencia | ¿Carga? | Tokens: media / p95 / máx | Modelo sugerido | Métrica | Tiempo T4 (estimado) | Pros | Contras |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `BramVanroy/conll2002`, config `es` (NER) | español | 8324 / 1916 / 1518; PER, ORG, LOC, MISC | "unknown" en la card | sí | 38.8 / 74 / 341 (BETO cased) | `dccuchile/bert-base-spanish-wwm-cased` | seqeval F1 por entidad | 4 épocas: 3.4 a 7 min | NER clásico en español, anotado a mano; la card de BETO trae una cifra para comparar | licencia sin declarar; 87.6 % de los tokens son O; MISC es la clase más escasa (11.6 % de las entidades) |
+| `BramVanroy/conll2002`, config `es` (NER) | español | 8324 / 1916 / 1518; PER, ORG, LOC, MISC | "unknown" en la card | sí | 38.8 / 74 / 341 (BETO cased) | `dccuchile/bert-base-spanish-wwm-cased` | seqeval F1 por entidad | 4 épocas: 3.4 a 7 min | NER clásico en español, anotado a mano; la card de BETO trae una cifra para comparar (88.43 de F1, en validación) | licencia sin declarar; 87.6 % de los tokens son O; MISC es la clase más escasa (11.6 % de las entidades) |
 | `universal-dependencies/universal_dependencies`, config `es_ancora` (POS) | español | 14287 / 1654 / 1721; 16 etiquetas UPOS | CC BY 4.0 según `PlanTL-GOB-ES/UD_Spanish-AnCora`; el repo de UD dice "other" | sí | 38.8 / 74 / 149 (BETO cased) | `dccuchile/bert-base-spanish-wwm-cased` | accuracy por token | 3 épocas: 4.3 a 9 min | anotado a mano, licencia clara, etiquetas fáciles de explicar | casi saturado (la card de BETO da 98.97 en POS), poca mejora que mostrar; el split de validación se llama `dev` |
 | `eriktks/conll2003` (NER) | inglés | 14041 / 3250 / 3453; PER, ORG, LOC, MISC | "other" (texto de Reuters) | sí, con `refs/convert/parquet` | 21.7 / 47 / 173 (bert-base-cased) | `google-bert/bert-base-cased` | seqeval F1 por entidad | 4 épocas: 3.6 a 7 min | el NER más conocido; trae nombres de etiqueta | en inglés; solo carga por la rama parquet |
 | `unimelb-nlp/wikiann`, config `es` (NER) | español | 20000 / 10000 / 10000; PER, ORG, LOC | "unknown" | sí | 13.2 / 22 / 104 (BETO cased) | `dccuchile/bert-base-spanish-wwm-cased` | seqeval F1 por entidad | 3 épocas: 1.8 a 4 min | carga directo y es el más grande | anotación automática; son fragmentos de Wikipedia de 6.4 palabras en promedio, no frases |
@@ -74,11 +86,11 @@ Métricas: F1 macro como métrica principal (la de `metric_for_best_model`), por
 Notas:
 
 - Para etiquetar uso `is_split_into_words=True` y pongo la etiqueta solo en el primer subtoken de cada palabra; el resto va con -100.
-- conll2002: con `max_length=256` casi no se corta nada (0.2 % de las frases pasan de 128 tokens con BETO). El texto son noticias de la agencia EFE de mayo de 2000. La card de BETO reporta 88.43 de F1 en NER con este dataset, que sirve para saber si mi resultado tiene sentido.
+- conll2002: con `max_length=256` casi no se corta nada (0.2 % de las frases pasan de 128 tokens con BETO). El texto son noticias de la agencia EFE de mayo de 2000. La card de BETO reporta 88.43 de F1 en NER con este dataset, medido sobre validación (el enlace del resultado apunta a un archivo `dev_results`), no sobre test. Sirve para saber si mi resultado en validación tiene sentido.
 - AnCora: `upos` viene como texto y hay que pasarlo a ids. Las contracciones vienen partidas ("del" aparece como "de" + "el"). Con `max_length=160` entra todo (máximo 149).
 - Descartados: `Babelscape/wikineural` es (76320 / 9540 / 9618, anotación automática, CC BY-NC-SA 4.0, y las etiquetas no traen nombres en las features; el mapeo está en la card) y MultiCoNER v2 en español (33 tipos de entidad, test de 246900 frases, solo por la rama parquet).
 
-Recomendación: `BramVanroy/conll2002` (es) con `dccuchile/bert-base-spanish-wwm-cased`. Es NER en español con anotación manual, carga directo y tengo una cifra de referencia en la card de BETO. Uso la versión cased porque las mayúsculas ayudan a reconocer nombres propios. Lo que no me gusta es que la licencia diga "unknown".
+Recomendación: `BramVanroy/conll2002` (es) con `dccuchile/bert-base-spanish-wwm-cased`. Es NER en español con anotación manual, carga directo y tengo una cifra de referencia en la card de BETO (88.43 de F1 en validación). Uso la versión cased porque las mayúsculas ayudan a reconocer nombres propios. Lo que no me gusta es que la licencia diga "unknown".
 
 Segunda opción: AnCora (POS) con BETO cased, si quiero una licencia clara. El problema es que ya está cerca de 99 % de accuracy y en el video no habría mucho que mostrar. Si no importa el idioma, `eriktks/conll2003` con `bert-base-cased` también sirve, aunque solo carga por la rama parquet.
 
