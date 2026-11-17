@@ -27,9 +27,9 @@ Después abre el notebook en VS Code o con `uv run jupyter lab` y escoge el kern
 
 ## Abrir en Google Colab
 
-[![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/USUARIO/REPO/blob/main/notebooks/proyecto2_finetuning.ipynb)
+[![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DiegoMunozCarvajalUdeA/nlp-finetuning-hf/blob/main/notebooks/proyecto2_finetuning.ipynb)
 
-(Cambia `USUARIO/REPO` en el enlace por el repo de GitHub.) También sirve Archivo > Abrir cuaderno > GitHub en Colab.
+También sirve Archivo > Abrir cuaderno > GitHub en Colab.
 
 Antes de correrlo:
 
