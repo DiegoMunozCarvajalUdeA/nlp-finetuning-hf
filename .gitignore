@@ -1,0 +1,39 @@
+# Entorno virtual de uv
+.venv/
+
+# Secretos (el token de Hugging Face va en .env, que nunca se sube)
+.env
+.env.*
+!.env.example
+
+# Modelos, checkpoints y figuras generadas
+outputs/*
+!outputs/.gitkeep
+checkpoint-*/
+checkpoints/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+
+# Caché de Hugging Face (si se apunta HF_HOME dentro del repo)
+.cache/
+huggingface/
+hf_cache/
+
+# Logs de experimentos
+wandb/
+runs/
+mlruns/
+lightning_logs/
+
+# Jupyter (OJO: no se borran las salidas del notebook, el profe las revisa en GitHub)
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Sistema
+.DS_Store

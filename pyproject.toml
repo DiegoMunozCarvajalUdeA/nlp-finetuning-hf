@@ -1,0 +1,37 @@
+[project]
+name = "proyecto2-nlp"
+version = "0.1.0"
+description = "Proyecto 2 de PLN (UdeA): fine-tuning de modelos de Hugging Face para clasificación, etiquetado y seq2seq"
+readme = "README.md"
+# Misma versión menor de Python que Google Colab (runtime 2026.10 usa 3.13)
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "accelerate>=1.16.0",
+    "datasets>=5.2.0",
+    "evaluate>=0.4.6",
+    "huggingface-hub>=2.4.0",
+    "ipywidgets>=8.1.9",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.5",
+    "pandas>=3.1.1",
+    "protobuf>=7.36.2",
+    "python-dotenv>=1.2.4",
+    "rouge-score>=0.1.2",
+    "sacrebleu>=2.6.0",
+    "scikit-learn>=1.9.1",
+    "seaborn>=0.13.2",
+    "sentencepiece>=0.2.3",
+    "seqeval>=1.2.2",
+    "torch>=2.15.0",
+    "transformers>=5.23.0",
+]
+
+[tool.uv]
+# No es un paquete instalable: solo el notebook y scripts sueltos
+package = false
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+    "jupyterlab>=4.6.6",
+]
