@@ -25,6 +25,8 @@ uv run python scripts/check_env.py
 
 Después abre el notebook en VS Code o con `uv run jupyter lab` y escoge el kernel `proyecto2-nlp`.
 
+Sin GPU CUDA, como en un Mac, los entrenamientos corren en modo rápido: usan unos cientos de ejemplos para comprobar que el código funciona y guardan todo en `outputs/prueba_rapida`. Esos números no sirven como resultado; los de verdad salen de Colab.
+
 ## Abrir en Google Colab
 
 [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DiegoMunozCarvajalUdeA/nlp-finetuning-hf/blob/main/notebooks/proyecto2_finetuning.ipynb)
@@ -35,7 +37,7 @@ Antes de correrlo:
 
 1. Entorno de ejecución > Cambiar tipo de entorno de ejecución > GPU T4.
 2. En el panel de Secrets (icono de llave) crea `HF_TOKEN` con tu token de Hugging Face y dale acceso al notebook.
-3. Corre todo desde arriba. La primera celda instala lo que falta sin tocar el torch de Colab, y la configuración monta Google Drive: los modelos y checkpoints quedan en `MyDrive/proyecto2-nlp/outputs`.
+3. Corre todo desde arriba. La primera celda instala lo que falta sin tocar el torch de Colab, y la configuración monta Google Drive: los modelos, tablas y figuras quedan en `MyDrive/proyecto2-nlp/outputs`.
 
 ## Estructura
 
