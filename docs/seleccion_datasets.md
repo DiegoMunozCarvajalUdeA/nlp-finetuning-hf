@@ -162,7 +162,7 @@ El resultado es X; lo realista es entre X y 2X. Con secuencias muy cortas (MASSI
 | 1 | EmoEvent es + robertuito | fp16 | 0.6 | 4 | 2.5 a 5 min | 4 LR x 2000 ej x 3 ép: 2.7 a 5 min |
 | 1 | Amazon es 200k + BETO | fp16 | 24.3 | 2 | 49 a 97 min | 4 LR x 5000 ej x 2 ép: 5 a 10 min |
 | 1 | Amazon es 50k + BETO | fp16 | 6.1 | 3 | 18 a 36 min | igual |
-| 2 | conll2002 es + BETO cased | fp16 | 0.8 | 4 | 3.4 a 7 min | 4 LR x 2000 ej x 3 ép: 2.4 a 5 min |
+| 2 | conll2002 es + BETO cased | fp16 | 0.8 | 4 | 3.4 a 7 min | 6 LR x 2000 ej x 3 ép: 3.6 a 7.5 min |
 | 2 | AnCora POS + BETO cased | fp16 | 1.4 | 3 | 4.3 a 9 min | 4 LR x 2000 ej x 3 ép: 2.4 a 5 min |
 | 2 | conll2003 + bert-base-cased | fp16 | 0.9 | 4 | 3.6 a 7 min | 4 LR x 3000 ej x 3 ép: 2.3 a 5 min |
 | 2 | wikiann es + BETO cased | fp16 | 0.6 | 3 | 1.8 a 4 min | 4 LR x 3000 ej x 3 ép: 1 a 2 min |
@@ -198,14 +198,14 @@ Para las tareas 2 y 3 ya no uso la referencia de SQuAD sino la velocidad real de
 
 | Tarea | Paso | Estimado ahora | Estimado antes |
 |---|---|---|---|
-| 2 | Búsqueda: 4 LR x 2000 frases x 3 épocas, con las 1915 frases de validación en cada época | 7.4 a 8.7 min | 2.4 a 5 min |
+| 2 | Búsqueda: 6 LR x 2000 frases x 3 épocas, con las 1915 frases de validación en cada época | 11.1 a 13.1 min | 3.6 a 7.5 min |
 | 2 | Entrenamiento completo: 8323 frases x 4 épocas | 7.8 a 9.3 min | 3.4 a 7 min |
 | 2 | Predicción de validación y test | menos de 1 min | no lo estimé |
 | 3 | Búsqueda: 4 LR x 2000 diálogos x 3 épocas | 17 a 20 min, sin la generación | 9 a 17 min |
 | 3 | Entrenamiento completo: 12460 diálogos x 5 épocas | 44 a 53 min, sin la generación | 23 a 45 min |
 | 3 | Entrenamiento completo con 3 épocas | 27 a 32 min, sin la generación | no lo estimé |
 
-La tarea 2 completa queda entre 16 y 19 min, así que dejo las 4 épocas. En la tarea 3, búsqueda y entrenamiento pasan de una hora sin contar la generación para ROUGE, que sigue sin estimar. Con secuencias largas la GPU probablemente se aprovecha mejor que con tuits cortos, así que estos números de la tarea 3 pueden quedar por encima de lo real. Los vuelvo a calcular con los tiempos de la tarea 2 antes de decidir si bajo a 3 épocas o achico la búsqueda.
+La tarea 2 completa queda en unos 20 a 24 min con las seis corridas de búsqueda, así que dejo las 4 épocas. En la tarea 3, búsqueda y entrenamiento pasan de una hora sin contar la generación para ROUGE, que sigue sin estimar. Con secuencias largas la GPU probablemente se aprovecha mejor que con tuits cortos, así que estos números de la tarea 3 pueden quedar por encima de lo real. Los vuelvo a calcular con los tiempos de la tarea 2 antes de decidir si bajo a 3 épocas o achico la búsqueda.
 
 ## Learning rates y muestra para la búsqueda
 
@@ -213,11 +213,13 @@ La idea es correr una búsqueda corta sobre una muestra del train, escoger el le
 
 Para los modelos tipo BERT parto de lo que recomienda el paper de BERT (apéndice A.3): batch 16 o 32, learning rate 5e-5, 3e-5 o 2e-5, entre 2 y 4 épocas, y avisan que los datasets pequeños son más sensibles a los hiperparámetros. Le agrego 1e-5 por abajo. Para BART no tengo una fuente equivalente; centro la búsqueda en 5e-5, que es el valor por defecto de `TrainingArguments`, y pruebo valores entre 2e-5 y 2e-4. Los T5 se suelen ajustar con learning rates más altos (del orden de 1e-4 a 1e-3); eso no lo verifiqué en el paper.
 
+En la tarea 2 agrego 8e-5 y 1e-4 para explorar por encima de 5e-5, que ganó en el borde superior de la grilla original de la tarea 1. Con 2000 frases, batch 16 y 3 épocas son 375 pasos, un número parecido al de aquella búsqueda.
+
 | Tarea | Learning rates | Muestra | Épocas | Se escoge con |
 |---|---|---|---|---|
 | 1 (emotion + distilbert) | 1e-5, 2e-5, 3e-5, 5e-5 | 4000 ejemplos estratificados | 2 | F1 macro en validación completa |
 | 1 (MASSIVE + BETO, si va) | 1e-5, 2e-5, 3e-5, 5e-5 | 3000 estratificados | 3 | F1 macro en validación |
-| 2 (conll2002 + BETO cased) | 1e-5, 2e-5, 3e-5, 5e-5 | 2000 frases | 3 | F1 de seqeval en validación |
+| 2 (conll2002 + BETO cased) | 1e-5, 2e-5, 3e-5, 5e-5, 8e-5, 1e-4 | 2000 frases | 3 | F1 de seqeval en validación |
 | 3 (DialogSum + bart-base) | 2e-5, 5e-5, 1e-4, 2e-4 | 2000 diálogos | 3 | ROUGE-L en 200 ejemplos de validación (generación greedy) y loss |
 | 3 (XL-Sum + BARTO, si va) | 2e-5, 5e-5, 1e-4 | 3000 artículos | 2 | ROUGE-L en 200 ejemplos de validación |
 | 3 (spanish-t5-small, si va) | 1e-4, 3e-4, 1e-3 | 3000 | 2 | ROUGE-L en 200 ejemplos de validación |
