@@ -22,7 +22,7 @@ Todo lo probé el 2026-11-17 con las versiones del `uv.lock` (datasets 5.2.0, tr
 - Tamaños y splits: los que devuelve `load_dataset`. En XL-Sum el API del visor dio error 500 y los saqué de la metadata del parquet y de la card.
 - Clases: distribución sobre todo el train.
 - Longitud en tokens: muestra aleatoria de 3000 ejemplos del train (semilla fija), con el tokenizer del modelo sugerido, sin truncar y contando los tokens especiales. El máximo es el de la muestra, no el del split completo. En XL-Sum y wikineural la muestra sale de streaming con un buffer de 10000, así que es menos representativa.
-- Tiempo en T4: es una estimación, no lo corrí en una T4. El método está en [Tiempos en T4](#tiempos-en-t4) y por eso doy rangos de X a 2X. Después de correr las tareas 1 y 2 en Colab recalculé la tarea 3 con los tiempos reales de la tarea 2, en [Tiempos reales en la T4](#tiempos-reales-en-la-t4).
+- Tiempo en T4: las tablas de candidatos conservan las estimaciones iniciales por FLOPs, con rangos de X a 2X; el método está en [Tiempos en T4](#tiempos-en-t4). Los tiempos medidos de las tareas 1 y 2 y la estimación de la tarea 3 recalculada con BETO están en [Tiempos reales en la T4](#tiempos-reales-en-la-t4).
 - fp16: hice un forward pass de cada modelo seq2seq en fp32 y en fp16 para ver si las activaciones se salen del rango de fp16. Está en [fp16 en la T4](#fp16-en-la-t4).
 
 ## Cargar datasets que tienen script
@@ -145,7 +145,7 @@ El transformers instalado solo recorta los valores en T5 cuando los hidden state
 
 ## Tiempos en T4
 
-No tuve una T4 para medir, así que estimé con FLOPs:
+Antes de correr las tareas en Colab no tenía una T4 para medir, así que hice estas estimaciones iniciales con FLOPs:
 
 - Referencia: bert-base-uncased en SQuAD v2 en una T4, fp16, secuencia 384, batch 8: 43.9 ejemplos/s (repo BERT-FineTuning-SQuAD-CUDA). Eso equivale a unos 9.4 TFLOP/s efectivos.
 - Costo de entrenar: 6 x parámetros sin embeddings x tokens. En seq2seq: 6 x (parámetros del encoder x tokens de entrada + (parámetros del decoder + cabeza LM) x tokens de salida).

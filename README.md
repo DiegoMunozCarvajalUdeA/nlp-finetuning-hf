@@ -48,6 +48,20 @@ Antes de correrlo:
 2. En el panel de Secrets (icono de llave) crea `HF_TOKEN` con tu token de Hugging Face y dale acceso al notebook.
 3. Corre todo desde arriba. La primera celda instala lo que falta sin tocar el torch de Colab, y la configuración monta Google Drive: los modelos, tablas y figuras quedan en `MyDrive/proyecto2-nlp/outputs`.
 
+## Correr solo la Tarea 3 en Colab
+
+1. Abre la versión de `main` con el enlace de Colab y escoge GPU T4.
+2. Ejecuta la sección 0 para instalar, montar Drive y configurar las utilidades.
+3. Ejecuta la Tarea 3 desde sus constantes y la carga del dataset hasta la demo de 3.5. No necesita ejecutar las tareas 1 y 2.
+4. Deja `REENTRENAR_T3 = False`: carga los pasos vigentes y completa los que falten. Si cambian el learning rate ganador, las épocas o la generación, repite los pasos que ya no correspondan. El notebook avisa si el ganador está en un borde de la grilla.
+5. Revisa que el ROUGE-L de validación de 3.5 coincida con el de la mejor época. Deja `SUBIR_AL_HUB_T3 = False` y descarga el notebook con las salidas para incorporarlas al repo.
+
+Dejo 5 épocas completas, con un presupuesto de 37 a 55 min para búsqueda, entrenamiento y generación de validación y test. Es una estimación basada en los tiempos reales de la Tarea 2 y en un supuesto explícito de velocidad de generación; falta medir BART en la T4. Descargar, tokenizar y escribir en Drive suma tiempo. El cálculo está en [`docs/seleccion_datasets.md`](docs/seleccion_datasets.md#tiempos-reales-en-la-t4).
+
+En `MyDrive/proyecto2-nlp/outputs/tarea3/` deben quedar el mejor modelo y tokenizer (`modelo/`, incluida su `generation_config.json`), `busqueda_lr.csv`, `config_busqueda.json`, los historiales por learning rate y del entrenamiento completo, `entrenamiento.json`, `linea_base.json`, `predicciones.jsonl`, `metricas_val_test.json`, `demo.json` y las tablas de comparación, longitud y distribución de ROUGE-L. Las figuras quedan en `outputs/figuras/`. Los checkpoints intermedios usan `/content/checkpoints/` y se eliminan al terminar; no van a Drive.
+
+La Tarea 3 se probó en copias del notebook en `/tmp`, con MPS y `PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.7 PYTORCH_MPS_LOW_WATERMARK_RATIO=0.5`: una corrida completa en modo rápido, otra reutilizando todo sin entrenar ni generar y una tercera cambiando el ganador de la búsqueda para comprobar que repite el entrenamiento y el test. En las tres se comprobó la coincidencia del ROUGE-L de validación con la época guardada. Las celdas del Hub quedaron sin ejecutar. Las celdas nuevas del repo no tienen salidas; las de Colab se conservaron.
+
 ## Estructura
 
 ```
