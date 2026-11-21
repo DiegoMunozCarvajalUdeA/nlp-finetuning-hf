@@ -20,7 +20,7 @@ Todo el desarrollo está en [`notebooks/proyecto2_finetuning.ipynb`](notebooks/p
 | 2. NER | F1 de seqeval | 0.8643 | 0.8772 | 5e-5 | 3 de 4 |
 | 3. Resumen | ROUGE-L | 0.4122 | 0.4502 | 1e-4 | 4 de 5 |
 
-El learning rate y la época se escogieron con validación; el test se evaluó al final. En la Tarea 2, el F1 de test queda 0.71 puntos por debajo del 88.43 que reporta el paper de BETO, que lo más probable es que sea de test; yo entrené con una sola semilla. En la Tarea 3, el ROUGE-L de test es 0.4502 si cada predicción se compara con la mejor de sus tres referencias y 0.3674 si se promedian las tres; la línea base de las primeras 2 intervenciones da 0.2535 y 0.2068.
+Escogí el learning rate y la época con validación y evalué el test una sola vez, al final. En la Tarea 2 mi F1 de test queda 0.71 puntos por debajo del 88.43 que reporta el paper de BETO, que muy probablemente también es de test; yo entrené con una sola semilla. En la Tarea 3 el ROUGE-L de test es 0.4502 si comparo cada predicción con la mejor de sus tres referencias y 0.3674 si promedio las tres. La línea base, que copia las primeras 2 intervenciones del diálogo, da 0.2535 y 0.2068.
 
 En la T4, la búsqueda y el entrenamiento tardaron 8.3 min en la Tarea 1, 8.6 min en la Tarea 2 y 40.1 min en la Tarea 3, contando en esta la generación final de validación y test.
 
