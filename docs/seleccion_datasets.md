@@ -22,7 +22,7 @@ Todo lo probé el 2026-11-17 con las versiones del `uv.lock` (datasets 5.2.0, tr
 - Tamaños y splits: los que devuelve `load_dataset`. En XL-Sum el API del visor dio error 500 y los saqué de la metadata del parquet y de la card.
 - Clases: distribución sobre todo el train.
 - Longitud en tokens: muestra aleatoria de 3000 ejemplos del train (semilla fija), con el tokenizer del modelo sugerido, sin truncar y contando los tokens especiales. El máximo es el de la muestra, no el del split completo. En XL-Sum y wikineural la muestra sale de streaming con un buffer de 10000, así que es menos representativa.
-- Tiempo en T4: es una estimación, no lo corrí en una T4. El método está en [Tiempos en T4](#tiempos-en-t4) y por eso doy rangos de X a 2X.
+- Tiempo en T4: es una estimación, no lo corrí en una T4. El método está en [Tiempos en T4](#tiempos-en-t4) y por eso doy rangos de X a 2X. Después de correr la tarea 1 en Colab recalculé las tareas 2 y 3 con los tiempos reales, en [Tiempos reales en la T4](#tiempos-reales-en-la-t4).
 - fp16: hice un forward pass de cada modelo seq2seq en fp32 y en fp16 para ver si las activaciones se salen del rango de fp16. Está en [fp16 en la T4](#fp16-en-la-t4).
 
 ## Cargar datasets que tienen script
@@ -178,6 +178,35 @@ El resultado es X; lo realista es entre X y 2X. Con secuencias muy cortas (MASSI
 
 Con las recomendaciones (emotion, conll2002 y DialogSum) todo entra sin submuestrear y lejos del límite de 1 a 2 h por tarea. El único candidato que puede necesitar submuestreo es XL-Sum.
 
+## Tiempos reales en la T4
+
+La tarea 1 ya corrió en Colab con la T4 (2026-11-18, fp16, batch 16). Los tiempos son los que reporta el Trainer (`train_runtime`): incluyen la evaluación en validación al final de cada época, pero no la descarga del modelo ni la tokenización.
+
+| Paso | Qué entrenó | Tiempo real | Estimado antes |
+|---|---|---|---|
+| Búsqueda de LR | 4 LR x 4000 tuits x 2 épocas, con los 2000 tuits de validación en cada época | 162 s (2.7 min), de 21 a 53 s por learning rate | 1 a 2 min |
+| Entrenamiento completo | 16000 tuits x 3 épocas | 179 s (3.0 min), 268 muestras/s | 1.5 a 3 min |
+
+El entrenamiento completo quedó en el borde de arriba del rango (2 veces X) y la búsqueda por encima (2.7 veces X). En la búsqueda la evaluación pesa más (2000 tuits de validación por cada 4000 de train) y cada corrida arranca un modelo nuevo. La corrida más rápida de la búsqueda (21 s) tardó menos de la mitad que las otras con el mismo número de tuits, así que la velocidad de la T4 en Colab también cambia de una corrida a otra.
+
+Para las tareas 2 y 3 ya no uso la referencia de SQuAD sino la velocidad real de la tarea 1:
+
+- El costo de entrenar un ejemplo es proporcional a los parámetros sin embeddings por la longitud con padding. Evaluar un ejemplo cuesta un tercio, porque es solo el forward.
+- La longitud con padding la simulé armando batches al azar de 16 con el train completo (de 64 en validación): 47 tokens en emotion, 84 en conll2002, y 410 de diálogo y 70 de resumen en DialogSum. Sale un poco más que el p95 que usé antes, porque cada batch se rellena hasta su ejemplo más largo.
+- Con eso, entrenar una frase de conll2002 con BETO cuesta 3.6 veces lo que un tuit con distilbert (el doble de parámetros y frases 1.8 veces más largas), evaluar una frase de validación cuesta 1.7 veces y entrenar un diálogo con bart-base, 12 veces.
+- En la T4, el entrenamiento completo de la tarea 1 avanzó el equivalente a 281 tuits de train por segundo y la búsqueda, 237. Uso esos dos valores como rango.
+
+| Tarea | Paso | Estimado ahora | Estimado antes |
+|---|---|---|---|
+| 2 | Búsqueda: 4 LR x 2000 frases x 3 épocas, con las 1915 frases de validación en cada época | 7.4 a 8.7 min | 2.4 a 5 min |
+| 2 | Entrenamiento completo: 8323 frases x 4 épocas | 7.8 a 9.3 min | 3.4 a 7 min |
+| 2 | Predicción de validación y test | menos de 1 min | no lo estimé |
+| 3 | Búsqueda: 4 LR x 2000 diálogos x 3 épocas | 17 a 20 min, sin la generación | 9 a 17 min |
+| 3 | Entrenamiento completo: 12460 diálogos x 5 épocas | 44 a 53 min, sin la generación | 23 a 45 min |
+| 3 | Entrenamiento completo con 3 épocas | 27 a 32 min, sin la generación | no lo estimé |
+
+La tarea 2 completa queda entre 16 y 19 min, así que dejo las 4 épocas. En la tarea 3, búsqueda y entrenamiento pasan de una hora sin contar la generación para ROUGE, que sigue sin estimar. Con secuencias largas la GPU probablemente se aprovecha mejor que con tuits cortos, así que estos números de la tarea 3 pueden quedar por encima de lo real. Los vuelvo a calcular con los tiempos de la tarea 2 antes de decidir si bajo a 3 épocas o achico la búsqueda.
+
 ## Learning rates y muestra para la búsqueda
 
 La idea es correr una búsqueda corta sobre una muestra del train, escoger el learning rate con la métrica de validación y después entrenar con todo el train.
@@ -199,7 +228,7 @@ Batch 16 en todas (en BART puede tocar 8 con acumulación de gradiente si no cab
 
 - Licencias: conll2002 y wikiann dicen "unknown"; emotion es solo para uso educativo y de investigación; DialogSum, XL-Sum y EmoEvent son NC. Para un proyecto de la universidad sirve, pero hay que citarlas en el informe.
 - Los datasets que cargan por `refs/convert/parquet` (XL-Sum, conll2003, tweet_sentiment_multilingual) dependen de una conversión automática del Hub.
-- Los tiempos son estimados. Hay que recalcularlos con los it/s reales de la primera búsqueda.
+- Los tiempos de las tareas 2 y 3 siguen siendo estimados, ahora con la velocidad real de la tarea 1 ([Tiempos reales en la T4](#tiempos-reales-en-la-t4)).
 - En la tarea 3 no estimé el tiempo de generación. Generar el test completo con beam search en cada época puede salir caro, por eso lo dejo para el final.
 - El ROUGE en español sale mal si no se cambia el tokenizer.
 - La card de BETO aclara que CC BY 4.0 describe su intención, pero que no están seguros de que todos los datos de preentrenamiento lo permitan (sobre todo para uso comercial). robertuito no declara licencia.
