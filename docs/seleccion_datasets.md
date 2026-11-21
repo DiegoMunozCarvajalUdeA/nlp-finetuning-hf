@@ -22,7 +22,7 @@ Todo lo probé el 2026-11-17 con las versiones del `uv.lock` (datasets 5.2.0, tr
 - Tamaños y splits: los que devuelve `load_dataset`. En XL-Sum el API del visor dio error 500 y los saqué de la metadata del parquet y de la card.
 - Clases: distribución sobre todo el train.
 - Longitud en tokens: muestra aleatoria de 3000 ejemplos del train (semilla fija), con el tokenizer del modelo sugerido, sin truncar y contando los tokens especiales. El máximo es el de la muestra, no el del split completo. En XL-Sum y wikineural la muestra sale de streaming con un buffer de 10000, así que es menos representativa.
-- Tiempo en T4: es una estimación, no lo corrí en una T4. El método está en [Tiempos en T4](#tiempos-en-t4) y por eso doy rangos de X a 2X. Después de correr la tarea 1 en Colab recalculé las tareas 2 y 3 con los tiempos reales, en [Tiempos reales en la T4](#tiempos-reales-en-la-t4).
+- Tiempo en T4: es una estimación, no lo corrí en una T4. El método está en [Tiempos en T4](#tiempos-en-t4) y por eso doy rangos de X a 2X. Después de correr las tareas 1 y 2 en Colab recalculé la tarea 3 con los tiempos reales de la tarea 2, en [Tiempos reales en la T4](#tiempos-reales-en-la-t4).
 - fp16: hice un forward pass de cada modelo seq2seq en fp32 y en fp16 para ver si las activaciones se salen del rango de fp16. Está en [fp16 en la T4](#fp16-en-la-t4).
 
 ## Cargar datasets que tienen script
@@ -152,7 +152,7 @@ No tuve una T4 para medir, así que estimé con FLOPs:
 - Longitud: el p95 de cada dataset, suponiendo padding dinámico.
 - Supongo fp32 3 veces más lento que fp16 y multiplico todo por 1.5 por dataloader, optimizador y evaluación.
 
-El resultado es X; lo realista es entre X y 2X. Con secuencias muy cortas (MASSIVE, wikiann) la GPU queda subutilizada y el tiempo real puede ser varias veces la estimación, pero siguen siendo minutos. No incluye descargar el modelo ni tokenizar, y en la tarea 3 tampoco incluye la generación para calcular ROUGE, que no estimé. Para no gastar tiempo ahí: durante el entrenamiento evalúo con la loss o con ROUGE sobre unos 200 ejemplos de validación, y genero el test completo una sola vez al final. Cuando corra la búsqueda de learning rate tengo los it/s reales y recalculo con eso.
+El resultado es X; lo realista es entre X y 2X. Con secuencias muy cortas (MASSIVE, wikiann) la GPU queda subutilizada y el tiempo real puede ser varias veces la estimación, pero siguen siendo minutos. No incluye descargar el modelo ni tokenizar, y en la tarea 3 tampoco incluye la generación para calcular ROUGE, que no estimé. Ese era el plan inicial. En la tarea 3 uso ROUGE-L sobre 200 ejemplos fijos en la búsqueda y sobre los 500 de validación al final de cada época del entrenamiento completo. El presupuesto de generación actualizado está en [Tiempos reales en la T4](#tiempos-reales-en-la-t4).
 
 | Tarea | Dataset y modelo | Precisión | Min por época | Épocas | Entrenamiento completo | Búsqueda de LR |
 |---|---|---|---|---|---|---|
@@ -180,32 +180,34 @@ Con las recomendaciones (emotion, conll2002 y DialogSum) todo entra sin submuest
 
 ## Tiempos reales en la T4
 
-La tarea 1 ya corrió en Colab con la T4 (2026-11-18, fp16, batch 16). Los tiempos son los que reporta el Trainer (`train_runtime`): incluyen la evaluación en validación al final de cada época, pero no la descarga del modelo ni la tokenización.
+Las tareas 1 y 2 ya corrieron en Colab con la T4, fp16 y batch 16. Uso los tiempos del Trainer (`train_runtime`): incluyen la evaluación al final de cada época, pero no descargar el modelo ni tokenizar. En la tarea 1 la búsqueda ampliada conserva las cuatro corridas anteriores y agrega dos nuevas.
 
-| Paso | Qué entrenó | Tiempo real | Estimado antes |
+| Tarea | Paso | Tiempo real | Estimado antes de correr |
 |---|---|---|---|
-| Búsqueda de LR | 4 LR x 4000 tuits x 2 épocas, con los 2000 tuits de validación en cada época | 162 s (2.7 min), de 21 a 53 s por learning rate | 1 a 2 min |
-| Entrenamiento completo | 16000 tuits x 3 épocas | 179 s (3.0 min), 268 muestras/s | 1.5 a 3 min |
+| 1 | Búsqueda ampliada: 6 LR x 4000 tuits x 2 épocas | 319 s; las dos corridas nuevas tardaron 94.5 y 61.7 s | 1 a 2 min para la grilla original de 4 LR |
+| 1 | Entrenamiento completo: 16000 tuits x 3 épocas | 179.3 s (3.0 min), 267.7 muestras/s | 1.5 a 3 min |
+| 2 | Búsqueda: 6 LR x 2000 frases x 3 épocas | 303 s (5.1 min) | 11.1 a 13.1 min, recalculados con la tarea 1 |
+| 2 | Entrenamiento completo: 8323 frases x 4 épocas | 210.3 s (3.5 min), 158.3 muestras/s | 7.8 a 9.3 min, recalculados con la tarea 1 |
 
-El entrenamiento completo quedó en el borde de arriba del rango (2 veces X) y la búsqueda por encima (2.7 veces X). En la búsqueda la evaluación pesa más (2000 tuits de validación por cada 4000 de train) y cada corrida arranca un modelo nuevo. La corrida más rápida de la búsqueda (21 s) tardó menos de la mitad que las otras con el mismo número de tuits, así que la velocidad de la T4 en Colab también cambia de una corrida a otra.
+La estimación con la tarea 1 quedó por encima de lo real en la tarea 2. Además, en la búsqueda de la tarea 1, 5e-5 tardó 21.3 s y 8e-5 tardó 94.5 s con los mismos 4000 tuits. La velocidad de la T4 de Colab varía entre corridas; un tiempo aislado no alcanza para medir el costo de un learning rate.
 
-Para las tareas 2 y 3 ya no uso la referencia de SQuAD sino la velocidad real de la tarea 1:
+### Recalcular la tarea 3 con la tarea 2
 
-- El costo de entrenar un ejemplo es proporcional a los parámetros sin embeddings por la longitud con padding. Evaluar un ejemplo cuesta un tercio, porque es solo el forward.
-- La longitud con padding la simulé armando batches al azar de 16 con el train completo (de 64 en validación): 47 tokens en emotion, 84 en conll2002, y 410 de diálogo y 70 de resumen en DialogSum. Sale un poco más que el p95 que usé antes, porque cada batch se rellena hasta su ejemplo más largo.
-- Con eso, entrenar una frase de conll2002 con BETO cuesta 3.6 veces lo que un tuit con distilbert (el doble de parámetros y frases 1.8 veces más largas), evaluar una frase de validación cuesta 1.7 veces y entrenar un diálogo con bart-base, 12 veces.
-- En la T4, el entrenamiento completo de la tarea 1 avanzó el equivalente a 281 tuits de train por segundo y la búsqueda, 237. Uso esos dos valores como rango.
+Uso BETO como referencia porque tiene un modelo más grande y secuencias más largas que distilbert con emotion. Sigue siendo una extrapolación: BETO etiqueta en paralelo y BART genera un token después de otro.
 
-| Tarea | Paso | Estimado ahora | Estimado antes |
-|---|---|---|---|
-| 2 | Búsqueda: 6 LR x 2000 frases x 3 épocas, con las 1915 frases de validación en cada época | 11.1 a 13.1 min | 3.6 a 7.5 min |
-| 2 | Entrenamiento completo: 8323 frases x 4 épocas | 7.8 a 9.3 min | 3.4 a 7 min |
-| 2 | Predicción de validación y test | menos de 1 min | no lo estimé |
-| 3 | Búsqueda: 4 LR x 2000 diálogos x 3 épocas | 17 a 20 min, sin la generación | 9 a 17 min |
-| 3 | Entrenamiento completo: 12460 diálogos x 5 épocas | 44 a 53 min, sin la generación | 23 a 45 min |
-| 3 | Entrenamiento completo con 3 épocas | 27 a 32 min, sin la generación | no lo estimé |
+- Simulé padding dinámico en batches de 16: 84 tokens por frase para BETO, 410 por diálogo y 70 por resumen para BART.
+- Aproximo el costo de train por parámetros sin embeddings x tokens. BETO tiene unos 85.6 millones; BART, 42.5 millones en el encoder, 56.6 en el decoder y 38.6 en la proyección al vocabulario. La razón por ejemplo es `(42.5 x 410 + (56.6 + 38.6) x 70) / (85.6 x 84)`, aproximadamente 3.35. Son cuentas de costo, no parámetros medidos por el contador de embeddings del script exploratorio, que cuenta pesos compartidos varias veces.
+- Para quitar aproximadamente la evaluación de los tiempos de BETO, cuento un forward como un tercio de un paso de train. La búsqueda da `(6 x 2000 x 3 + 6 x 1915 x 3 / 3) / 303`, unos 157 ejemplos equivalentes/s; el entrenamiento completo da `(8323 x 4 + 1915 x 4 / 3) / 210.3`, unos 170. Dividir por 3.35 deja unos 47 a 51 diálogos/s para entrenar BART.
+- La generación no se deduce de esas muestras/s. Para presupuestarla supongo, sin haberlo medido en la T4, entre 10 y 30 ms por paso de decodificación de un batch de 16, con caché y hasta 128 tokens nuevos. Cuento 156 batches en la búsqueda (4 LR x 3 épocas x 13 batches), 160 en las cinco validaciones completas y 64 en la evaluación final de validación y test. Son 380 batches y hasta 48640 pasos, de 8.1 a 24.3 min. El rango incluye el beam search de 4 beams del modelo final; en la búsqueda uso greedy. Es una hipótesis de velocidad que comprobaré con los tiempos guardados.
 
-La tarea 2 completa queda en unos 20 a 24 min con las seis corridas de búsqueda, así que dejo las 4 épocas. En la tarea 3, búsqueda y entrenamiento pasan de una hora sin contar la generación para ROUGE, que sigue sin estimar. Con secuencias largas la GPU probablemente se aprovecha mejor que con tuits cortos, así que estos números de la tarea 3 pueden quedar por encima de lo real. Los vuelvo a calcular con los tiempos de la tarea 2 antes de decidir si bajo a 3 épocas o achico la búsqueda.
+| Paso de la tarea 3 | Estimación con BETO |
+|---|---|
+| Búsqueda: 4 LR x 2000 diálogos x 3 épocas, sin generación | 7.8 a 8.6 min |
+| Entrenamiento completo: 12460 diálogos x 5 épocas, sin generación | 20.4 a 22.3 min |
+| Generación de validación por época, validación final y test | 8.1 a 24.3 min |
+| Total de búsqueda, entrenamiento y evaluación | aproximadamente 37 a 55 min |
+
+Dejo 5 épocas: la estimación completa queda por debajo de una hora, incluyendo generación y test. El tiempo de descarga, tokenización y escritura en Drive queda aparte; Colab puede tardar más si la T4 va lenta. No son tiempos medidos de BART. Guardo los tiempos de cada corrida y de la generación final para revisar este presupuesto cuando lo ejecute en Colab. La mejor época se escoge por ROUGE-L sobre los 500 diálogos de validación, con la misma generación de la evaluación final.
 
 ## Learning rates y muestra para la búsqueda
 
@@ -217,10 +219,10 @@ En la tarea 2 agrego 8e-5 y 1e-4 para explorar por encima de 5e-5, que ganó en 
 
 | Tarea | Learning rates | Muestra | Épocas | Se escoge con |
 |---|---|---|---|---|
-| 1 (emotion + distilbert) | 1e-5, 2e-5, 3e-5, 5e-5 | 4000 ejemplos estratificados | 2 | F1 macro en validación completa |
+| 1 (emotion + distilbert) | 1e-5, 2e-5, 3e-5, 5e-5, 8e-5, 1e-4 | 4000 ejemplos estratificados | 2 | F1 macro en validación completa |
 | 1 (MASSIVE + BETO, si va) | 1e-5, 2e-5, 3e-5, 5e-5 | 3000 estratificados | 3 | F1 macro en validación |
 | 2 (conll2002 + BETO cased) | 1e-5, 2e-5, 3e-5, 5e-5, 8e-5, 1e-4 | 2000 frases | 3 | F1 de seqeval en validación |
-| 3 (DialogSum + bart-base) | 2e-5, 5e-5, 1e-4, 2e-4 | 2000 diálogos | 3 | ROUGE-L en 200 ejemplos de validación (generación greedy) y loss |
+| 3 (DialogSum + bart-base) | 2e-5, 5e-5, 1e-4, 2e-4 | 2000 diálogos | 3 | ROUGE-L en 200 ejemplos fijos de validación (generación greedy) |
 | 3 (XL-Sum + BARTO, si va) | 2e-5, 5e-5, 1e-4 | 3000 artículos | 2 | ROUGE-L en 200 ejemplos de validación |
 | 3 (spanish-t5-small, si va) | 1e-4, 3e-4, 1e-3 | 3000 | 2 | ROUGE-L en 200 ejemplos de validación |
 
@@ -230,8 +232,8 @@ Batch 16 en todas (en BART puede tocar 8 con acumulación de gradiente si no cab
 
 - Licencias: conll2002 y wikiann dicen "unknown"; emotion es solo para uso educativo y de investigación; DialogSum, XL-Sum y EmoEvent son NC. Para un proyecto de la universidad sirve, pero hay que citarlas en el informe.
 - Los datasets que cargan por `refs/convert/parquet` (XL-Sum, conll2003, tweet_sentiment_multilingual) dependen de una conversión automática del Hub.
-- Los tiempos de las tareas 2 y 3 siguen siendo estimados, ahora con la velocidad real de la tarea 1 ([Tiempos reales en la T4](#tiempos-reales-en-la-t4)).
-- En la tarea 3 no estimé el tiempo de generación. Generar el test completo con beam search en cada época puede salir caro, por eso lo dejo para el final.
+- La tarea 3 sigue teniendo tiempos estimados, ahora con la velocidad real de la tarea 2 ([Tiempos reales en la T4](#tiempos-reales-en-la-t4)).
+- La generación de BART todavía no está medida en la T4. La presupuesto con un rango explícito de tiempo por paso; valido cada época y genero el test una sola vez al final, sin usarlo para escoger hiperparámetros.
 - El ROUGE en español sale mal si no se cambia el tokenizer.
 - La card de BETO aclara que CC BY 4.0 describe su intención, pero que no están seguros de que todos los datos de preentrenamiento lo permitan (sobre todo para uso comercial). robertuito no declara licencia.
 

@@ -12,6 +12,15 @@ Todo el desarrollo está en [`notebooks/proyecto2_finetuning.ipynb`](notebooks/p
 | Etiquetado de secuencias (NER) | [`BramVanroy/conll2002`](https://huggingface.co/datasets/BramVanroy/conll2002), config `es` | [`dccuchile/bert-base-spanish-wwm-cased`](https://huggingface.co/dccuchile/bert-base-spanish-wwm-cased) | F1 de seqeval |
 | Sequence-to-sequence (resumen de diálogos) | [`knkarthick/dialogsum`](https://huggingface.co/datasets/knkarthick/dialogsum) | [`facebook/bart-base`](https://huggingface.co/facebook/bart-base) | ROUGE |
 
+## Resultados en Colab (T4)
+
+| Tarea | Métrica | Validación | Test | Learning rate | Época escogida |
+|---|---|---|---|---|---|
+| 1. Emoción | F1 macro | 0.9230 | 0.8874 | 5e-5 | 3 de 3 |
+| 2. NER | F1 de seqeval | 0.8643 | 0.8772 | 5e-5 | 3 de 4 |
+
+El learning rate y la época se escogieron con validación. Las salidas de Colab y su análisis están en el notebook; la Tarea 3 todavía no tiene resultados de la T4.
+
 ## Instalación local (uv)
 
 Necesitas [uv](https://docs.astral.sh/uv/). uv descarga la versión de Python del proyecto (3.13, la misma de Colab) si no la tienes.
