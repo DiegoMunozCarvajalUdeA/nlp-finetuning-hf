@@ -1,8 +1,14 @@
 # Proyecto 2: Fine-tuning para tareas de PLN
 
-Proyecto del curso de Procesamiento de Lenguaje Natural (UdeA): fine-tuning de modelos de Hugging Face para clasificación de secuencias, etiquetado de secuencias y sequence-to-sequence. En cada tarea describo el dataset, hago un análisis exploratorio, busco el learning rate con una muestra del train, entreno con todo el train y evalúo el mejor modelo en test.
+## Integrantes:
 
-Todo el desarrollo está en [`notebooks/proyecto2_finetuning.ipynb`](notebooks/proyecto2_finetuning.ipynb). Cómo escogí los datasets y modelos está en [`docs/seleccion_datasets.md`](docs/seleccion_datasets.md).
+-Jose Luis Murillo Fernandez
+-Diego Muñoz Carvajal
+-Mateo Gaviria Ruiz
+
+Proyecto del curso de Procesamiento de Lenguaje Natural (UdeA): fine-tuning de modelos de Hugging Face para clasificación de secuencias, etiquetado de secuencias y sequence-to-sequence. En cada tarea describimos el dataset, hacemos un análisis exploratorio, buscamos el learning rate con una muestra del train, entrenamos con todo el train y evaluamos el mejor modelo en test.
+
+Todo el desarrollo está en [`notebooks/proyecto2_finetuning.ipynb`](notebooks/proyecto2_finetuning.ipynb). Cómo escogimos los datasets y modelos está en [`docs/seleccion_datasets.md`](docs/seleccion_datasets.md).
 
 ## Tareas
 
@@ -20,7 +26,7 @@ Todo el desarrollo está en [`notebooks/proyecto2_finetuning.ipynb`](notebooks/p
 | 2. NER | F1 de seqeval | 0.8643 | 0.8772 | 5e-5 | 3 de 4 |
 | 3. Resumen | ROUGE-L | 0.4122 | 0.4502 | 1e-4 | 4 de 5 |
 
-Escogí el learning rate y la época con validación y evalué el test una sola vez, al final. En la Tarea 2 mi F1 de test queda 0.71 puntos por debajo del 88.43 que reporta el paper de BETO, que muy probablemente también es de test; yo entrené con una sola semilla. En la Tarea 3 el ROUGE-L de test es 0.4502 si comparo cada predicción con la mejor de sus tres referencias y 0.3674 si promedio las tres. La línea base, que copia las primeras 2 intervenciones del diálogo, da 0.2535 y 0.2068.
+Escogimos el learning rate y la época con validación y evaluamos el test una sola vez, al final. En la Tarea 2 nuestra F1 de test queda 0.71 puntos por debajo del 88.43 que reporta el paper de BETO, que muy probablemente también es de test; nosotros entrenamos con una sola semilla. En la Tarea 3 el ROUGE-L de test es 0.4502 si comparamos cada predicción con la mejor de sus tres referencias y 0.3674 si promediamos las tres. La línea base, que copia las primeras 2 intervenciones del diálogo, da 0.2535 y 0.2068.
 
 En la T4, la búsqueda y el entrenamiento tardaron 8.3 min en la Tarea 1, 8.6 min en la Tarea 2 y 40.1 min en la Tarea 3, contando en esta la generación final de validación y test.
 
