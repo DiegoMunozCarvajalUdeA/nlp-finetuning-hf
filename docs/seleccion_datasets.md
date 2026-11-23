@@ -1,10 +1,10 @@
 # Selección de datasets y modelos
 
-Notas para decidir qué dataset y qué modelo usar en cada tarea: los candidatos que probé, lo que medí y lo que recomendaba.
+Notas para decidir qué dataset y qué modelo usar en cada tarea: los candidatos que probamos, lo que medimos y lo que recomendabamos.
 
 ## Decisión
 
-Me quedé con las tres recomendaciones de este documento:
+Seleccionamos las tres recomendaciones de este documento:
 
 | Tarea | Dataset | Modelo | Métrica principal |
 |---|---|---|---|
@@ -12,18 +12,18 @@ Me quedé con las tres recomendaciones de este documento:
 | 2. Etiquetado de secuencias (NER) | `BramVanroy/conll2002`, config `es` | `dccuchile/bert-base-spanish-wwm-cased` | F1 de seqeval |
 | 3. Sequence-to-sequence (resumen de diálogos) | `knkarthick/dialogsum` | `facebook/bart-base` | ROUGE |
 
-Las longitudes de este documento salen de muestras de 3000 ejemplos. En el EDA del notebook las medí sobre los splits completos, así que algunos máximos y porcentajes cambian un poco.
+Las longitudes de este documento salen de muestras de 3000 ejemplos. En el EDA del notebook las medimos sobre los splits completos, así que algunos máximos y porcentajes cambian un poco.
 
-Todo lo probé el 2026-11-17 con las versiones del `uv.lock` (datasets 5.2.0, transformers 5.23.0). Los scripts de prueba y los JSON con las medidas quedaron en `outputs/exploracion/`, que no va a git.
+Realizamos las pruebas el 2026-11-17 con las versiones del `uv.lock` (datasets 5.2.0, transformers 5.23.0). Los scripts de prueba y los JSON con las medidas quedaron en `outputs/exploracion/`, que no va a git.
 
-## Cómo medí
+## Cómo medimos
 
-- Carga: cada candidato lo cargué de verdad con `load_dataset`. "Sí" en la tabla quiere decir que carga directo; si necesita algo más, lo digo.
-- Tamaños y splits: los que devuelve `load_dataset`. En XL-Sum el API del visor dio error 500 y los saqué de la metadata del parquet y de la card.
+- Carga: Cargamos cada candidato de verdad con `load_dataset`. "Sí" en la tabla quiere decir que carga directo; si necesita algo más, lo decimos.
+- Tamaños y splits: los que devuelve `load_dataset`. En XL-Sum el API del visor dio error 500 y los obtuvimos de la metadata del parquet y de la card.
 - Clases: distribución sobre todo el train.
 - Longitud en tokens: muestra aleatoria de 3000 ejemplos del train (semilla fija), con el tokenizer del modelo sugerido, sin truncar y contando los tokens especiales. El máximo es el de la muestra, no el del split completo. En XL-Sum y wikineural la muestra sale de streaming con un buffer de 10000, así que es menos representativa.
 - Tiempo en T4: las tablas de candidatos conservan las estimaciones iniciales por FLOPs, con rangos de X a 2X; el método está en [Tiempos en T4](#tiempos-en-t4). Los tiempos medidos de las tres tareas y el presupuesto previo de BART recalculado con BETO están en [Tiempos reales en la T4](#tiempos-reales-en-la-t4).
-- fp16: hice un forward pass de cada modelo seq2seq en fp32 y en fp16 para ver si las activaciones se salen del rango de fp16. Está en [fp16 en la T4](#fp16-en-la-t4).
+- fp16: hicimos un forward pass de cada modelo seq2seq en fp32 y en fp16 para ver si las activaciones se salen del rango de fp16. Está en [fp16 en la T4](#fp16-en-la-t4).
 
 ## Cargar datasets que tienen script
 
@@ -35,9 +35,9 @@ from datasets import load_dataset
 ds = load_dataset("csebuetnlp/xlsum", data_dir="spanish", revision="refs/convert/parquet")
 ```
 
-Esa rama la genera el Hub, no los autores, y puede cambiar o desaparecer. Prefiero datasets con parquet en `main` y uso este truco solo cuando no hay otra opción.
+Esa rama la genera el Hub, no los autores, y puede cambiar o desaparecer. Priorizamos datasets con parquet en `main` y uso este truco solo cuando no hay otra opción.
 
-Dos cosas que encontré de paso:
+Dos cosas que encontramos de paso:
 
 - `BramVanroy/conll2002` tiene parquet en `main` y carga directo. Es el mismo contenido que `eriktks/conll2002` por la rama parquet.
 - `universal_dependencies` sin organización ya no existe, pero `universal-dependencies/universal_dependencies` sí carga directo (config `es_ancora`).
@@ -65,14 +65,14 @@ Notas:
   )
   ```
 
-- Amazon lo descarto por la licencia, aunque en tamaño y balance es el mejor de la tabla.
-- También miré `cardiffnlp/tweet_sentiment_multilingual` (spanish): 1839 / 324 / 870, 3 clases balanceadas, CC BY 3.0 más los términos de Twitter. Solo carga por la rama parquet y es muy pequeño. `stanfordnlp/imdb` no tiene split de validación y el 14 % de las reseñas pasa de 512 tokens con distilbert.
+- Descartamos Amazon por la licencia, aunque en tamaño y balance es el mejor de la tabla.
+- También revisamos `cardiffnlp/tweet_sentiment_multilingual` (spanish): 1839 / 324 / 870, 3 clases balanceadas, CC BY 3.0 más los términos de Twitter. Solo carga por la rama parquet y es muy pequeño. `stanfordnlp/imdb` no tiene split de validación y el 14 % de las reseñas pasa de 512 tokens con distilbert.
 
-Recomendación: `dair-ai/emotion` con `distilbert/distilbert-base-uncased`. Carga directo, trae los tres splits, la card es buena y la tarea se entiende sin explicar nada. Entrena en minutos, así que queda tiempo para la búsqueda de learning rate y para mirar los errores. Si quiero un modelo más fuerte, `roberta-base` también cabe de sobra.
+Recomendación: `dair-ai/emotion` con `distilbert/distilbert-base-uncased`. Carga directo, trae los tres splits, la card es buena y la tarea se entiende sin explicar nada. Entrena en minutos, así que queda tiempo para la búsqueda de learning rate y para mirar los errores. Si necesitáramos un modelo más potente, `roberta-base` también cabe de sobra.
 
-Segunda opción: MASSIVE en español con BETO uncased, si quiero que esta tarea también sea en español. Es igual de barata y la licencia es clara; lo malo son las 60 clases con algunas casi vacías.
+Segunda opción: MASSIVE en español con BETO uncased, si quisieramos que esta tarea también sea en español. Es igual de barata y la licencia es clara; lo malo son las 60 clases con algunas casi vacías.
 
-Métricas: F1 macro como métrica principal (la de `metric_for_best_model`), porque las clases están desbalanceadas y un modelo que casi nunca predice surprise puede tener buena accuracy. Reporto también accuracy, que es la que todo el mundo entiende, y en el análisis el F1 por clase y la matriz de confusión.
+Métricas: F1 macro como métrica principal (la de `metric_for_best_model`), porque las clases están desbalanceadas y un modelo que casi nunca predice surprise puede tener buena accuracy. También reportamos accuracy, que es la que todo el mundo entiende, y en el análisis el F1 por clase y la matriz de confusión.
 
 ## Tarea 2: etiquetado de secuencias
 
@@ -85,12 +85,12 @@ Métricas: F1 macro como métrica principal (la de `metric_for_best_model`), por
 
 Notas:
 
-- Para etiquetar uso `is_split_into_words=True` y pongo la etiqueta solo en el primer subtoken de cada palabra; el resto va con -100.
-- conll2002: con `max_length=256` casi no se corta nada (0.2 % de las frases pasan de 128 tokens con BETO). El texto son noticias de la agencia EFE de mayo de 2000. La card de BETO reporta 88.43 de F1 en NER con este dataset, el mismo valor de la Tabla 1 del paper de BETO (Cañete et al., 2020). Antes lo tomé como validación solo porque el enlace de la card apunta a un archivo `dev_results`, pero lo más probable es que sea de test. La tabla no dice el split; en la página 5 los autores comparan esos resultados con el 89 % de XLM-RoBERTa en NER "in the Spanish test set", y el mejor F1 del archivo `dev_results` es 0.8512 (learning rate 3e-5, batch 32, 4 épocas), no 88.43. Por eso lo comparo con mi F1 de test.
+- Para etiquetar usamos `is_split_into_words=True` y asignamos la etiqueta solo en el primer subtoken de cada palabra; el resto va con -100.
+- conll2002: con `max_length=256` casi no se corta nada (0.2 % de las frases pasan de 128 tokens con BETO). El texto son noticias de la agencia EFE de mayo de 2000. La card de BETO reporta 88.43 de F1 en NER con este dataset, el mismo valor de la Tabla 1 del paper de BETO (Cañete et al., 2020). Antes lo tomamos como validación solo porque el enlace de la card apunta a un archivo `dev_results`, pero lo más probable es que sea de test. La tabla no dice el split; en la página 5 los autores comparan esos resultados con el 89 % de XLM-RoBERTa en NER "in the Spanish test set", y el mejor F1 del archivo `dev_results` es 0.8512 (learning rate 3e-5, batch 32, 4 épocas), no 88.43. Por eso lo comparo con mi F1 de test.
 - AnCora: `upos` viene como texto y hay que pasarlo a ids. Las contracciones vienen partidas ("del" aparece como "de" + "el"). Con `max_length=160` entra todo (máximo 149).
 - Descartados: `Babelscape/wikineural` es (76320 / 9540 / 9618, anotación automática, CC BY-NC-SA 4.0, y las etiquetas no traen nombres en las features; el mapeo está en la card) y MultiCoNER v2 en español (33 tipos de entidad, test de 246900 frases, solo por la rama parquet).
 
-Recomendación: `BramVanroy/conll2002` (es) con `dccuchile/bert-base-spanish-wwm-cased`. Es NER en español con anotación manual, carga directo y tengo una cifra de referencia en la card y el paper de BETO (88.43 de F1, lo más probable en test). Uso la versión cased porque las mayúsculas ayudan a reconocer nombres propios. Lo que no me gusta es que la licencia diga "unknown".
+Recomendación: `BramVanroy/conll2002` (es) con `dccuchile/bert-base-spanish-wwm-cased`. Es NER en español con anotación manual, carga directo y contamos con una cifra de referencia en la card y el paper de BETO (88.43 de F1, lo más probable en test). Usamos la versión cased porque las mayúsculas ayudan a reconocer nombres propios. Lo que no nos gusta es que la licencia diga "unknown".
 
 Segunda opción: AnCora (POS) con BETO cased, si quiero una licencia clara. El problema es que ya está cerca de 99 % de accuracy y en el video no habría mucho que mostrar. Si no importa el idioma, `eriktks/conll2003` con `bert-base-cased` también sirve, aunque solo carga por la rama parquet.
 
@@ -107,22 +107,22 @@ Métricas: para NER uso seqeval (precisión, recall y F1 por entidad, como en Co
 
 Notas:
 
-- DialogSum: el test tiene 1500 filas pero son 500 diálogos con 3 resúmenes cada uno (ids `test_N_1`, `test_N_2`, `test_N_3`). Para evaluar hay que generar una vez por diálogo y pasar las 3 referencias como lista. El `rouge` de evaluate acepta listas de referencias y se queda con la mejor para cada predicción (lo probé). `max_source_length=512` corta el 1.2 % y `max_target_length=128` no corta casi nada.
+- DialogSum: el test tiene 1500 filas pero son 500 diálogos con 3 resúmenes cada uno (ids `test_N_1`, `test_N_2`, `test_N_3`). Para evaluar hay que generar una vez por diálogo y pasar las 3 referencias como lista. El `rouge` de evaluate acepta listas de referencias y se queda con la mejor para cada predicción (se comprobó). `max_source_length=512` corta el 1.2 % y `max_target_length=128` no corta casi nada.
 - XL-Sum: el 57 % de los artículos pasa de 512 tokens con el tokenizer de BARTO y el 52 % pasa de 1024, que es el máximo de BART, así que hay que cortar sí o sí. En noticias lo principal suele ir al inicio, pero igual hay que decirlo en el informe. Con los 38110 ejemplos y 3 épocas la estimación queda entre 57 min y 2 h; si se pasa, submuestreo el train a unos 20000. `flax-community/spanish-t5-small` (60M, MIT) es la opción más barata. En el Mac lo medí en streaming; en Colab se puede bajar completo.
 - Traducción: no la recomiendo, por los modelos:
   - mT5 da NaN en fp16 (lo medí, abajo) y en fp32 la estimación pasa de 2 h.
   - `google-t5/t5-small` no tiene ñ, Ñ, í, ú, ¿ ni ¡ en el vocabulario: salen como `<unk>` (23 por cada 1000 tokens de texto en español). No puede escribir español bien.
   - `Helsinki-NLP/opus-mt-en-es` sí funciona en fp16 y es barato (unos 20 min), pero es un Marian, no T5 ni BART, y ya fue entrenado con datos de OPUS, así que ajustarlo con opus_books u opus-100 es medio trampa.
-- Otros que miré: `Helsinki-NLP/opus-100` en-es (1M / 2000 / 2000, licencia "unknown", frases ruidosas), `LeoCordoba/CC-NEWS-ES-titles` (MIT, 370125 / 16092 / 16093, notas de finanzas con plantilla y poca calidad) y mlsum es (carga por la rama parquet pero es enorme).
+- Otros que evaluamos: `Helsinki-NLP/opus-100` en-es (1M / 2000 / 2000, licencia "unknown", frases ruidosas), `LeoCordoba/CC-NEWS-ES-titles` (MIT, 370125 / 16092 / 16093, notas de finanzas con plantilla y poca calidad) y mlsum es (carga por la rama parquet pero es enorme).
 
 Recomendación: `knkarthick/dialogsum` con `facebook/bart-base`. Los resúmenes los escribieron personas, los diálogos se entienden sin contexto y se ven bien en un video, el test trae 3 referencias, bart-base es estable en fp16 y el entrenamiento completo queda alrededor de media hora.
 
-Segunda opción: XL-Sum en español con `vgaraujov/bart-base-spanish`, con `max_source_length=512`, `max_target_length=128` y submuestreo si hace falta. Sirve si quiero el seq2seq en español, a cambio de cortar más de la mitad de los artículos, depender de la rama parquet y usar un modelo poco conocido.
+Segunda opción: XL-Sum en español con `vgaraujov/bart-base-spanish`, con `max_source_length=512`, `max_target_length=128` y submuestreo si hace falta. Sirve si quisieramos desarrollar seq2seq en español, a cambio de cortar más de la mitad de los artículos, depender de la rama parquet y usar un modelo poco conocido.
 
-Métricas: ROUGE-1, ROUGE-2, ROUGE-L y ROUGE-Lsum, que son las estándar para resumen (comparan n-gramas y subsecuencias con la referencia). Reporto también la longitud media de lo generado para ver si el modelo se queda corto o se alarga. Dos detalles:
+Métricas: ROUGE-1, ROUGE-2, ROUGE-L y ROUGE-Lsum, que son las estándar para resumen (comparan n-gramas y subsecuencias con la referencia). También reportamos la longitud media de lo generado para ver si el modelo se queda corto o se alarga. Dos detalles:
 
 - ROUGE-Lsum necesita las oraciones separadas por salto de línea (con nltk) o da lo mismo que ROUGE-L.
-- El tokenizer por defecto de `rouge_score` borra los caracteres que no son ASCII. Lo probé con "La información técnica del niño español" y queda `['la', 'informaci', 'n', 't', 'cnica', 'del', 'ni', 'o', 'espa', 'ol']`. En inglés no pasa nada, pero en español hay que pasar un tokenizer propio, por ejemplo `rouge.compute(..., tokenizer=lambda x: x.lower().split())`, y no usar `use_stemmer` (es el stemmer de Porter, para inglés).
+- El tokenizer por defecto de `rouge_score` borra los caracteres que no son ASCII. Lo comprobamos con "La información técnica del niño español" y queda `['la', 'informaci', 'n', 't', 'cnica', 'del', 'ni', 'o', 'espa', 'ol']`. En inglés no pasa nada, pero en español hay que pasar un tokenizer propio, por ejemplo `rouge.compute(..., tokenizer=lambda x: x.lower().split())`, y no usar `use_stemmer` (es el stemmer de Porter, para inglés).
 
 Si al final escojo traducción, la métrica sería sacreBLEU más chrF.
 
@@ -130,7 +130,7 @@ Si al final escojo traducción, la métrica sería sacreBLEU más chrF.
 
 La T4 no tiene bf16, así que en Colab se entrena en fp16. El rango de fp16 llega hasta 65504; si una activación se pasa, sale inf y luego NaN. Con T5 y mT5 esto es un problema conocido: el PR que intentaba arreglarlo en transformers (#10956) se cerró sin fusionar en 2024 y en el foro de Hugging Face hay un hilo de mT5 con fp16 que da loss cero, sin solución. mT5 se preentrenó en bf16.
 
-Lo medí con un forward pass de un batch de ejemplos: activación máxima en fp32 y loss en fp32 y en fp16 (autocast en MPS, en el Mac). No es la T4, pero el desborde depende de los valores y no del hardware.
+Lo medimos con un forward pass de un batch de ejemplos: activación máxima en fp32 y loss en fp32 y en fp16 (autocast en MPS, en el Mac). No es la T4, pero el desborde depende de los valores y no del hardware.
 
 | Modelo | Activación máxima en fp32 | Loss fp32 / fp16 | Veredicto |
 |---|---|---|---|
@@ -196,12 +196,12 @@ La estimación con la tarea 1 quedó por encima de lo real en la tarea 2. En la 
 
 ### Presupuesto previo de la tarea 3 con BETO
 
-Antes de correr BART, usé BETO como referencia porque tiene un modelo más grande y secuencias más largas que distilbert con emotion. Es una extrapolación, porque BETO etiqueta en paralelo y BART genera un token después de otro.
+Antes de correr BART, utilizamos BETO como referencia porque tiene un modelo más grande y secuencias más largas que distilbert con emotion. Es una extrapolación, porque BETO etiqueta en paralelo y BART genera un token después de otro.
 
-- Simulé padding dinámico en batches de 16: 84 tokens por frase para BETO, 410 por diálogo y 70 por resumen para BART.
-- Aproximo el costo de train por parámetros sin embeddings x tokens. BETO tiene unos 85.6 millones; BART, 42.5 millones en el encoder, 56.6 en el decoder y 38.6 en la proyección al vocabulario. La razón por ejemplo es `(42.5 x 410 + (56.6 + 38.6) x 70) / (85.6 x 84)`, aproximadamente 3.35. Son cuentas de costo, porque el contador de embeddings del script exploratorio cuenta los pesos compartidos varias veces.
-- Para descontar la evaluación de los tiempos de BETO, cuento un forward como un tercio de un paso de train. La búsqueda da `(6 x 2000 x 3 + 6 x 1915 x 3 / 3) / 303`, unos 157 ejemplos equivalentes/s; el entrenamiento completo da `(8323 x 4 + 1915 x 4 / 3) / 210.3`, unos 170. Dividir por 3.35 deja unos 47 a 51 diálogos/s para entrenar BART.
-- La generación no se deduce de esas muestras/s. Para presupuestarla supuse, sin haberlo medido aún en la T4, entre 10 y 30 ms por paso de decodificación de un batch de 16, con caché y hasta 128 tokens nuevos. Cuento 156 batches en la búsqueda (4 LR x 3 épocas x 13 batches), 160 en las cinco validaciones completas y 64 en la evaluación final de validación y test. Son 380 batches y hasta 48640 pasos, de 8.1 a 24.3 min. El rango incluye el beam search de 4 beams del modelo final; en la búsqueda uso greedy.
+- Simulamos padding dinámico en batches de 16: 84 tokens por frase para BETO, 410 por diálogo y 70 por resumen para BART.
+- Aproximamos el costo de train por parámetros sin embeddings x tokens. BETO tiene unos 85.6 millones; BART, 42.5 millones en el encoder, 56.6 en el decoder y 38.6 en la proyección al vocabulario. La razón por ejemplo es `(42.5 x 410 + (56.6 + 38.6) x 70) / (85.6 x 84)`, aproximadamente 3.35. Son cuentas de costo, porque el contador de embeddings del script exploratorio cuenta los pesos compartidos varias veces.
+- Para descontar la evaluación de los tiempos de BETO, contamos un forward como un tercio de un paso de train. La búsqueda da `(6 x 2000 x 3 + 6 x 1915 x 3 / 3) / 303`, unos 157 ejemplos equivalentes/s; el entrenamiento completo da `(8323 x 4 + 1915 x 4 / 3) / 210.3`, unos 170. Dividir por 3.35 deja unos 47 a 51 diálogos/s para entrenar BART.
+- La generación no se deduce de esas muestras/s. Para presupuestarla supusimos, sin haberlo medido aún en la T4, entre 10 y 30 ms por paso de decodificación de un batch de 16, con caché y hasta 128 tokens nuevos. Cuento 156 batches en la búsqueda (4 LR x 3 épocas x 13 batches), 160 en las cinco validaciones completas y 64 en la evaluación final de validación y test. Son 380 batches y hasta 48640 pasos, de 8.1 a 24.3 min. El rango incluye el beam search de 4 beams del modelo final; en la búsqueda uso greedy.
 
 | Paso de la tarea 3 | Estimación con BETO |
 |---|---|
@@ -210,7 +210,7 @@ Antes de correr BART, usé BETO como referencia porque tiene un modelo más gran
 | Generación de validación por época, validación final y test | 8.1 a 24.3 min |
 | Total de búsqueda, entrenamiento y evaluación | aproximadamente 37 a 55 min |
 
-Dejé 5 épocas porque la estimación completa quedaba por debajo de una hora, incluyendo generación y test. El tiempo de descarga, tokenización y escritura en Drive quedaba aparte. La mejor época se escoge por ROUGE-L sobre los 500 diálogos de validación, con la misma generación de la evaluación final.
+Establecimos 5 épocas porque la estimación completa quedaba por debajo de una hora, incluyendo generación y test. El tiempo de descarga, tokenización y escritura en Drive quedaba aparte. La mejor época se escoge por ROUGE-L sobre los 500 diálogos de validación, con la misma generación de la evaluación final.
 
 ### Resultado medido de la tarea 3
 
